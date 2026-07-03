@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import useAuthStore from "../store/authStore";
 import { useNavigate } from "react-router-dom";
+import {DynamicToast} from "../components/toast";
 const GoogleIcon = () => (
   <svg className="h-5 w-5 mr-3 text-gray-700" viewBox="0 0 24 24">
     <path
@@ -24,18 +25,26 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
-  const { login, isLoading, error, clearError } = useAuthStore();
+  const { login, isLoading,isAuthenticated, error, clearError } = useAuthStore();
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       await login({ email, password });
-      // navigate("/dashboard");
+      if(isAuthenticated)
+      navigate("/dashboard");
     } catch (error) {
       console.log(error);
     }
   };
   return (
     <div className="fixed inset-0 flex h-full w-full bg-white font-sans antialiased selection:bg-black selection:text-white overflow-hidden">
+      {/* Toast Notification Container placed at the top-right of the screen */}
+      {error && (
+        <div className="fixed top-5 right-5 z-50 animate-in fade-in slide-in-from-top-5 duration-300">
+          <DynamicToast title={"error"} message={error} onClose={clearError}/>
+        </div>
+      )}
+
       <div className="relative hidden h-full lg:w-[55%] bg-[#1E1915] lg:flex flex-col justify-between p-16 overflow-hidden">
         <div className="absolute inset-0 opacity-20 mix-blend-screen bg-[radial-gradient(#F3F4F6_1px,transparent_1px)] [background-size:24px_24px]"></div>
 
@@ -119,11 +128,7 @@ export default function Login() {
               </span>
             </div>
           </div>
-          {error && (
-            <div className="mb-4 p-3 text-sm text-red-500 bg-red-50 rounded-lg border border-red-100">
-              {error}
-            </div>
-          )}
+
           <form action="#" method="POST" className="space-y-4">
             <div className="relative group">
               <input
