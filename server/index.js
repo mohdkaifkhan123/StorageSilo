@@ -5,16 +5,20 @@ import authRoutes from "./routes/authRoutes.js";
 import prisma from "./prisma/prismaClient.js";
 import fileRoutes from "./routes/fileRoutes.js";
 import folderRoutes from "./routes/folderRoutes.js";
+import userRoutes from "./routes/userRoutes.js"
+import cors from "cors";
+import cookieParser from "cookie-parser"
 dotenv.config();
 
 const app = express();
-
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
+app.use(cookieParser())
 connectDB();
 
 app.use("/api/auth", authRoutes);
+app.use("/api/user",userRoutes);
 app.use("/api/files", fileRoutes);
 app.use("/api/folder", folderRoutes);
 app.get("/health", (req, res) => {
@@ -23,7 +27,11 @@ app.get("/health", (req, res) => {
 
 app.use((err, req, res, next) => {
   console.error(err);
-  res.status(500).json({ message: "Server error", error: err.message });
+  const statusCode = err.statusCode || 500;
+  res.status(statusCode).json({
+    message: err.message || "Server error",
+    error: err.details || err.stack,
+  });
 });
 
 process.on("SIGINT", async () => {
