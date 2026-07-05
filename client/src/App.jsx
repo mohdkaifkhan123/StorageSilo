@@ -4,7 +4,8 @@ import Register from "./page/Register";
 import LandingPage from "./page/Landing";
 import Dashboard from "./page/Dashboard";
 import ProtectedRoute from "./routes/protectedRoute";
-import PublicRoute from "./routes/publicRoute"
+import PublicRoute from "./routes/publicRoute";
+import ProfilePage from "./page/Profile"
 function App() {
   return (
     <Router>
@@ -16,6 +17,7 @@ function App() {
         </Route>
         <Route element={<ProtectedRoute />}>
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/setting" element={<ProfilePage />} />
         </Route>
       </Routes>
     </Router>
