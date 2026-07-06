@@ -40,11 +40,12 @@ const ProfilePage = () => {
   };
   const handleSingleSessionLogout = () => {
     logout();
-    if (isAuthenticated === false) navigate("/login");
+    if (isAuthenticated === false) {
+      navigate("/login");
+    }
   };
 
   return (
-   
     <div
       style={{
         width: "100vw",
