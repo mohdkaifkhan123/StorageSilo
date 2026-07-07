@@ -5,20 +5,24 @@ import authRoutes from "./routes/authRoutes.js";
 import prisma from "./prisma/prismaClient.js";
 import fileRoutes from "./routes/fileRoutes.js";
 import folderRoutes from "./routes/folderRoutes.js";
-import userRoutes from "./routes/userRoutes.js"
+import userRoutes from "./routes/userRoutes.js";
 import cors from "cors";
-import cookieParser from "cookie-parser"
+import cookieParser from "cookie-parser";
 dotenv.config();
 
 const app = express();
-app.use(cors());
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  }),
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser())
+app.use(cookieParser(process.env.COOKIE_SECRET));
 connectDB();
-
 app.use("/api/auth", authRoutes);
-app.use("/api/user",userRoutes);
+app.use("/api/user", userRoutes);
 app.use("/api/files", fileRoutes);
 app.use("/api/folder", folderRoutes);
 app.get("/health", (req, res) => {

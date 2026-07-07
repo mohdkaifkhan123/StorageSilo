@@ -50,14 +50,6 @@ const useAuthStore = create(
         }
       },
 
-      logout: () => {
-        set({
-          user: null,
-          token: null,
-          isAuthenticated: false,
-        });
-      },
-
       clearError: () => set({ error: null }),
     }),
     {

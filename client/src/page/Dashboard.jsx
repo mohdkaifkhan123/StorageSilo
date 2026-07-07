@@ -60,7 +60,7 @@ const Dashboard = () => {
               <HardDrive size={18} />
             </div>
             <span className="text-md font-bold tracking-tight text-[#0F0F14]">
-              Storemy<span className="text-[#3B30EC]">stuff</span>
+              Storage<span className="text-[#3B30EC]">silo</span>
             </span>
           </div>
 
