@@ -42,17 +42,6 @@ export const findFoldersFiles = async (req, res) => {
   });
 };
 
-// id             Int   @id@default(autoincrement())
-//   fileId         Int?
-//   file           File?  @relation(fields:[fileId],references:[id])
-//   folderId       Int?
-//   folder         Folder? @relation(fields:[folderId],references:[id])
-//   senderUserId   Int
-//   sender         User  @relation("SendShares",fields:[senderUserId],references:[id])
-//   receiverUserId Int
-//   receiver       User  @relation("ReceivedShares",fields:[receiverUserId],references:[id])
-//   createdAt      DateTime?
-//   permission     Permission
 export const shareFolder = async (req, res) => {
   const { email, permission, folderId } = req.body;
 
