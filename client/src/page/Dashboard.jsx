@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useRef } from "react";
+import useFileStore from "../store/fileStore";
 import {
   Upload,
   FolderPlus,
@@ -24,6 +26,8 @@ const Dashboard = () => {
   const [viewMode, setViewMode] = useState("grid");
   const [currentTab, setCurrentTab] = useState("all");
   const navigate = useNavigate();
+  const { presignedURL } = useFileStore();
+  const inputFileRef = useRef();
   const mockFiles = [
     {
       name: "modal.PNG",
@@ -50,8 +54,15 @@ const Dashboard = () => {
   const routeSetting = () => {
     navigate("/setting");
   };
+  const handleFileSelection = () => {
+    inputFileRef.current.click();
+  };
+  const handleFileChange = (e) => {
+    const metadata = e.target.files[0];
+    const { name, type } = metadata;
+    presignedURL({ name, type });
+  };
   return (
- 
     <div className="fixed inset-0 w-screen h-screen bg-[#F9F9FB] text-[#1E1E24] font-sans flex m-0 p-0 overflow-hidden select-none z-[9999]">
       <aside className="w-64 bg-[#F0F0F5] border-r border-[#E2E2E9] hidden md:flex flex-col justify-between p-4 shrink-0 h-full">
         <div className="space-y-6">
@@ -65,7 +76,11 @@ const Dashboard = () => {
           </div>
 
           <div className="space-y-2 px-1">
-            <button className="w-full flex items-center justify-between bg-[#3B30EC] hover:bg-[#2A20DF] text-white text-sm font-medium p-3 rounded-xl shadow-md transition-all active:scale-[0.98]">
+            <input ref={inputFileRef} type="file" onChange={handleFileChange} />
+            <button
+              onClick={handleFileSelection}
+              className="w-full flex items-center justify-between bg-[#3B30EC] hover:bg-[#2A20DF] text-white text-sm font-medium p-3 rounded-xl shadow-md transition-all active:scale-[0.98]"
+            >
               <span className="flex items-center gap-2">
                 <Upload size={16} /> Upload items
               </span>
