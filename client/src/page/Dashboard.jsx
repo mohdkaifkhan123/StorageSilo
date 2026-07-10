@@ -26,7 +26,7 @@ const Dashboard = () => {
   const [viewMode, setViewMode] = useState("grid");
   const [currentTab, setCurrentTab] = useState("all");
   const navigate = useNavigate();
-  const { presignedURL } = useFileStore();
+  const { presignedURL, preSignedData } = useFileStore();
   const inputFileRef = useRef();
   const mockFiles = [
     {
@@ -57,10 +57,17 @@ const Dashboard = () => {
   const handleFileSelection = () => {
     inputFileRef.current.click();
   };
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const metadata = e.target.files[0];
     const { name, type } = metadata;
-    presignedURL({ name, type });
+    const urlData = await presignedURL({ name, type });
+    let res = await fetch(urlData.uploadURL, {
+      method: "PUT",
+      body: metadata,
+      header: {
+        "Content-type": metadata.type,
+      },
+    });
   };
   return (
     <div className="fixed inset-0 w-screen h-screen bg-[#F9F9FB] text-[#1E1E24] font-sans flex m-0 p-0 overflow-hidden select-none z-[9999]">
