@@ -30,11 +30,13 @@ const fileService = {
   getAllFilesService: async () => {
     let res = await fetch(`${API_URL}/list`, {
       method: "GET",
-      "Content-Type": "application/json",
+      headers: {
+        "Content-Type": "application/json",
+      },
       credentials: "include",
     });
     const data = await res.json();
-    console.log("lidssst",data);
+    return data;
   },
 };
 

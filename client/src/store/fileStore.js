@@ -21,9 +21,12 @@ const useFileStore = create((set) => ({
   getAllFilesData: async () => {
     const res = await fileService.getAllFilesService();
     try {
-      set({ allFiles: res });
+      const files = res?.fileList || [];
+      set({ allFiles: files });
+      return files;
     } catch (error) {
       set({ error: error });
+      return [];
     }
   },
 }));
