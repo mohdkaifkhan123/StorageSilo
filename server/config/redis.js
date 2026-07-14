@@ -11,9 +11,7 @@ redisClient.on("error",(err)=>{
     console.error("Redis client error",err.message);
 })
 
-try{
-    await redisClient.connect()
-}catch(err){
-    console.error("Initial Redis connection failed",err.message)
-}
+redisClient.connect().catch((err) => {
+    console.error("Initial Redis connection failed", err.message);
+});
 export default redisClient

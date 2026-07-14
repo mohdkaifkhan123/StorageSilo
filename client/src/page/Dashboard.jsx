@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useRef } from "react";
 import useFileStore from "../store/fileStore";
@@ -21,36 +21,95 @@ import {
   ChevronRight,
   MoreVertical,
 } from "lucide-react";
-
+import FileMenuModal from "../components/modal";
 const Dashboard = () => {
   const [viewMode, setViewMode] = useState("grid");
   const [currentTab, setCurrentTab] = useState("all");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   const navigate = useNavigate();
-  const { presignedURL, preSignedData } = useFileStore();
+  const {
+    presignedURL,
+    preSignedData,
+    saveMetaDataStore,
+    getAllFilesData,
+    allFiles,
+    deleteFiles,
+  } = useFileStore();
+  const [mockFiles, setMockFiles] = useState([]);
+
   const inputFileRef = useRef();
-  const mockFiles = [
-    {
-      name: "modal.PNG",
-      type: "PNG",
-      size: "124.41 KB",
-      date: "Jul 4, 2026",
-      shared: "Only you",
-    },
-    {
-      name: "production-logs.txt",
-      type: "TXT",
-      size: "14.20 KB",
-      date: "Jul 3, 2026",
-      shared: "3 teams",
-    },
-    {
-      name: "architecture-v2.pdf",
-      type: "PDF",
-      size: "2.4 MB",
-      date: "Jun 28, 2026",
-      shared: "Only you",
-    },
-  ];
+
+  const formatBytes = (bytes, decimals = 2) => {
+    if (!bytes) return "0 Bytes";
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i];
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "Jul 4, 2026";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
+  const fetchAllFiles = async () => {
+    console.log("asdfghjkl");
+    const finalList = await getAllFilesData();
+    console.log("finallll", finalList);
+    if (Array.isArray(finalList)) {
+      const mapped = finalList.map((file) => ({
+        ...file,
+        name: file.fileName,
+        size: formatBytes(file.fileSize),
+        type: file.mimetype
+          ? file.mimetype.split("/")[1]?.toUpperCase() ||
+            file.mimetype.toUpperCase()
+          : "UNKNOWN",
+        date: formatDate(file.createdAt || file.deletedAt),
+        shared:
+          file.shares && file.shares.length > 0
+            ? `${file.shares.length} users`
+            : "Only you",
+      }));
+      setMockFiles(mapped);
+    } else {
+      setMockFiles([]);
+    }
+  };
+  useEffect(() => {
+    fetchAllFiles();
+  }, []);
+  // const mockFiles = [
+  //   {
+  //     name: "modal.PNG",
+  //     type: "PNG",
+  //     size: "124.41 KB",
+  //     date: "Jul 4, 2026",
+  //     shared: "Only you",
+  //   },
+  //   {
+  //     name: "production-logs.txt",
+  //     type: "TXT",
+  //     size: "14.20 KB",
+  //     date: "Jul 3, 2026",
+  //     shared: "3 teams",
+  //   },
+  //   {
+  //     name: "architecture-v2.pdf",
+  //     type: "PDF",
+  //     size: "2.4 MB",
+  //     date: "Jun 28, 2026",
+  //     shared: "Only you",
+  //   },
+  // ];
   const routeSetting = () => {
     navigate("/setting");
   };
@@ -59,15 +118,57 @@ const Dashboard = () => {
   };
   const handleFileChange = async (e) => {
     const metadata = e.target.files[0];
-    const { name, type } = metadata;
+    console.log(metadata);
+    const { name, type, size } = metadata;
     const urlData = await presignedURL({ name, type });
     let res = await fetch(urlData.uploadURL, {
       method: "PUT",
       body: metadata,
-      header: {
-        "Content-type": metadata.type,
+      headers: {
+        "Content-Type": metadata.type,
       },
     });
+    //originalname, path, size, mimetype, FolderId
+    if (res.ok) {
+      await saveMetaDataStore({
+        originalname: name,
+        path: urlData.s3Key,
+        size: size,
+        mimetype: type,
+        FolderId: 1,
+      });
+      await fetchAllFiles();
+    }
+  };
+  const handleOpenMenu = (e, file) => {
+    e.stopPropagation();
+
+    // Capture exactly where the button was clicked relative to the viewport window
+    const rect = e.currentTarget.getBoundingClientRect();
+
+    // Position it nicely right under and aligned left of the vertical dots button
+    setMenuPosition({
+      x: rect.right,
+      y: rect.bottom + window.scrollY + 4,
+    });
+
+    setSelectedFile(file);
+    setMenuOpen(true);
+  };
+
+  const handleDeleteAction = async (id) => {
+    console.log("Triggering soft delete pipeline for file ID:", id);
+
+    try {
+      await deleteFiles(id);
+
+      // Refresh the dashboard view using the same mapper from fetchAllFiles.
+      await fetchAllFiles();
+
+      console.log("File soft-deleted and UI view refreshed successfully.");
+    } catch (error) {
+      console.error("Error executing delete pipeline:", error);
+    }
   };
   return (
     <div className="fixed inset-0 w-screen h-screen bg-[#F9F9FB] text-[#1E1E24] font-sans flex m-0 p-0 overflow-hidden select-none z-[9999]">
@@ -222,7 +323,7 @@ const Dashboard = () => {
 
           {viewMode === "grid" ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-5 w-full">
-              {mockFiles.map((file, idx) => (
+              {mockFiles?.map((file, idx) => (
                 <div
                   key={idx}
                   className="bg-white border border-[#E2E2E9] hover:border-[#3B30EC]/60 rounded-xl p-4 transition-all group relative flex flex-col justify-between h-40 shadow-xs hover:shadow-md"
@@ -231,8 +332,11 @@ const Dashboard = () => {
                     <div className="p-2.5 bg-[#F4F4F7] border border-[#E2E2E9] rounded-xl text-[#3B30EC] group-hover:bg-[#3B30EC] group-hover:text-white transition-all">
                       <FileText size={18} />
                     </div>
-                    <button className="text-[#82828A] hover:text-[#0F0F14] p-1 rounded">
-                      <MoreVertical size={14} />
+                    <button
+                      onClick={(e) => handleOpenMenu(e, file)}
+                      className="text-[#82828A] hover:text-[#0F0F14] p-1 hover:bg-[#F2F2F7] rounded-full transition-colors"
+                    >
+                      <MoreVertical size={16} />
                     </button>
                   </div>
 
@@ -263,7 +367,7 @@ const Dashboard = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#E2E2E9]">
-                    {mockFiles.map((file, idx) => (
+                    {mockFiles?.map((file, idx) => (
                       <tr
                         key={idx}
                         className="hover:bg-[#F9F9FB] transition group"
@@ -287,6 +391,13 @@ const Dashboard = () => {
             </div>
           )}
         </main>
+        <FileMenuModal
+          isOpen={menuOpen}
+          onClose={() => setMenuOpen(false)}
+          anchorPosition={menuPosition}
+          file={selectedFile}
+          onDelete={handleDeleteAction}
+        />
       </div>
     </div>
   );

@@ -38,6 +38,17 @@ const fileService = {
     const data = await res.json();
     return data;
   },
+  deleteFileService: async (id) => {
+    const res = await fetch(`${API_URL}/delete/${id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    });
+    const data = await res.json();
+    return data;
+  },
 };
 
 export default fileService;
