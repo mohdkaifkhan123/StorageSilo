@@ -33,6 +33,10 @@ const useFileStore = create((set) => ({
     const res = await fileService.deleteFileService(id);
     return res;
   },
+  getTrashData: async () => {
+    const res = await fileService.getTrashDataService();
+    return res;
+  },
 }));
 
 export default useFileStore;

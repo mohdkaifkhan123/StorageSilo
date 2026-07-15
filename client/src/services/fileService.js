@@ -49,6 +49,17 @@ const fileService = {
     const data = await res.json();
     return data;
   },
+  getTrashDataService:async()=>{
+    const res=await fetch(`${API_URL}/trash`,{
+      method:"GET",
+      headers:{
+        "Content-Type":"application/json"
+      },
+      credentials:"include"
+    })
+    const data=await res.json()
+    return data;
+  }
 };
 
 export default fileService;
