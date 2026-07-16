@@ -1,7 +1,6 @@
 const API_URL = "http://localhost:3000/api/files";
 const fileService = {
   presignedUrlService: async (fileData) => {
-
     const response = await fetch(`${API_URL}/signedurl`, {
       method: "POST",
       headers: {
@@ -49,17 +48,28 @@ const fileService = {
     const data = await res.json();
     return data;
   },
-  getTrashDataService:async()=>{
-    const res=await fetch(`${API_URL}/trash`,{
-      method:"GET",
-      headers:{
-        "Content-Type":"application/json"
+  getTrashDataService: async () => {
+    const res = await fetch(`${API_URL}/trash`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
       },
-      credentials:"include"
-    })
-    const data=await res.json()
+      credentials: "include",
+    });
+    const data = await res.json();
     return data;
-  }
+  },
+  restoreService: async (id) => {
+    const res = await fetch(`${API_URL}/restore/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    });
+    const data = await res.json();
+    return data;
+  },
 };
 
 export default fileService;

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useRef } from "react";
-import useFileStore from "../store/fileStore";
+import useFileStore from "../../store/fileStore";
 import {
   Upload,
   FolderPlus,
@@ -21,7 +21,8 @@ import {
   ChevronRight,
   MoreVertical,
 } from "lucide-react";
-import FileMenuModal from "../components/modal";
+import FileMenuModal from "../../components/modal";
+import TrashView from "./tabs/TrashPage";
 const Dashboard = () => {
   const [viewMode, setViewMode] = useState("grid");
   const [currentTab, setCurrentTab] = useState("all");
@@ -36,6 +37,7 @@ const Dashboard = () => {
     getAllFilesData,
     allFiles,
     deleteFiles,
+    getTrashData,
   } = useFileStore();
   const [mockFiles, setMockFiles] = useState([]);
 
@@ -87,29 +89,7 @@ const Dashboard = () => {
   useEffect(() => {
     fetchAllFiles();
   }, []);
-  // const mockFiles = [
-  //   {
-  //     name: "modal.PNG",
-  //     type: "PNG",
-  //     size: "124.41 KB",
-  //     date: "Jul 4, 2026",
-  //     shared: "Only you",
-  //   },
-  //   {
-  //     name: "production-logs.txt",
-  //     type: "TXT",
-  //     size: "14.20 KB",
-  //     date: "Jul 3, 2026",
-  //     shared: "3 teams",
-  //   },
-  //   {
-  //     name: "architecture-v2.pdf",
-  //     type: "PDF",
-  //     size: "2.4 MB",
-  //     date: "Jun 28, 2026",
-  //     shared: "Only you",
-  //   },
-  // ];
+
   const routeSetting = () => {
     navigate("/setting");
   };
@@ -128,7 +108,6 @@ const Dashboard = () => {
         "Content-Type": metadata.type,
       },
     });
-    //originalname, path, size, mimetype, FolderId
     if (res.ok) {
       await saveMetaDataStore({
         originalname: name,
@@ -143,10 +122,8 @@ const Dashboard = () => {
   const handleOpenMenu = (e, file) => {
     e.stopPropagation();
 
-    // Capture exactly where the button was clicked relative to the viewport window
     const rect = e.currentTarget.getBoundingClientRect();
 
-    // Position it nicely right under and aligned left of the vertical dots button
     setMenuPosition({
       x: rect.right,
       y: rect.bottom + window.scrollY + 4,
@@ -162,13 +139,15 @@ const Dashboard = () => {
     try {
       await deleteFiles(id);
 
-      // Refresh the dashboard view using the same mapper from fetchAllFiles.
       await fetchAllFiles();
 
       console.log("File soft-deleted and UI view refreshed successfully.");
     } catch (error) {
       console.error("Error executing delete pipeline:", error);
     }
+  };
+  const handleTabNavigation = async () => {
+    navigate("/trash");
   };
   return (
     <div className="fixed inset-0 w-screen h-screen bg-[#F9F9FB] text-[#1E1E24] font-sans flex m-0 p-0 overflow-hidden select-none z-[9999]">
@@ -277,119 +256,136 @@ const Dashboard = () => {
             </div>
           </div>
         </header>
+        <main className="flex-1 flex flex-col overflow-hidden">
 
-        <main className="flex-1 p-6 overflow-y-auto space-y-6 w-full">
-          <div className="w-full border border-dashed border-[#C4C4D0] hover:border-[#3B30EC] bg-white rounded-xl p-8 transition-colors flex flex-col items-center justify-center text-center cursor-pointer group shadow-sm">
-            <div className="w-10 h-10 rounded-xl bg-[#F4F4F7] border border-[#E2E2E9] group-hover:border-[#3B30EC]/30 flex items-center justify-center text-[#62626A] group-hover:text-[#3B30EC] transition-colors mb-3">
-              <Upload size={18} />
-            </div>
-            <p className="text-sm font-semibold text-[#0F0F14]">
-              Drag and drop files to instantly upload
-            </p>
-            <p className="text-xs text-[#82828A] mt-0.5">
-              Or click here to browse files from your computer
-            </p>
-          </div>
+          <div className="flex-1 overflow-y-auto p-6">
+            {currentTab === "trash" ? (
+              <TrashView />
+            ) : (
+              <main className="flex-1 p-6 overflow-y-auto space-y-6 w-full">
+                <div className="w-full border border-dashed border-[#C4C4D0] hover:border-[#3B30EC] bg-white rounded-xl p-8 transition-colors flex flex-col items-center justify-center text-center cursor-pointer group shadow-sm">
+                  <div className="w-10 h-10 rounded-xl bg-[#F4F4F7] border border-[#E2E2E9] group-hover:border-[#3B30EC]/30 flex items-center justify-center text-[#62626A] group-hover:text-[#3B30EC] transition-colors mb-3">
+                    <Upload size={18} />
+                  </div>
+                  <p className="text-sm font-semibold text-[#0F0F14]">
+                    Drag and drop files to instantly upload
+                  </p>
+                  <p className="text-xs text-[#82828A] mt-0.5">
+                    Or click here to browse files from your computer
+                  </p>
+                </div>
 
-          <div className="flex items-center justify-between border-b border-[#E2E2E9] pb-3 w-full">
-            <div className="flex items-center gap-1.5 text-xs font-mono text-[#62626A]">
-              <span className="hover:text-[#0F0F14] cursor-pointer">Home</span>
-              <ChevronRight size={12} />
-              <span className="text-[#3B30EC] font-medium truncate">
-                root-khanfghj...
-              </span>
-            </div>
+                <div className="flex items-center justify-between border-b border-[#E2E2E9] pb-3 w-full">
+                  <div className="flex items-center gap-1.5 text-xs font-mono text-[#62626A]">
+                    <span className="hover:text-[#0F0F14] cursor-pointer">
+                      Home
+                    </span>
+                    <ChevronRight size={12} />
+                    <span className="text-[#3B30EC] font-medium truncate">
+                      root-khanfghj...
+                    </span>
+                  </div>
 
-            <div className="flex items-center gap-2">
-              <div className="bg-[#E8E8EF] p-0.5 rounded-md flex items-center">
-                <button
-                  onClick={() => setViewMode("grid")}
-                  className={`p-1.5 rounded ${viewMode === "grid" ? "bg-white text-[#3B30EC] shadow-xs" : "text-[#82828A] hover:text-[#0F0F14]"}`}
-                >
-                  <LayoutGrid size={14} />
-                </button>
-                <button
-                  onClick={() => setViewMode("list")}
-                  className={`p-1.5 rounded ${viewMode === "list" ? "bg-white text-[#3B30EC] shadow-xs" : "text-[#82828A] hover:text-[#0F0F14]"}`}
-                >
-                  <List size={14} />
-                </button>
-              </div>
-              <button className="bg-white border border-[#E2E2E9] text-xs text-[#4A4A52] font-medium px-2.5 py-1.5 rounded-md flex items-center gap-1.5 shadow-xs hover:bg-[#F4F4F7]">
-                <ArrowUpDown size={12} /> Sort
-              </button>
-            </div>
-          </div>
-
-          {viewMode === "grid" ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-5 w-full">
-              {mockFiles?.map((file, idx) => (
-                <div
-                  key={idx}
-                  className="bg-white border border-[#E2E2E9] hover:border-[#3B30EC]/60 rounded-xl p-4 transition-all group relative flex flex-col justify-between h-40 shadow-xs hover:shadow-md"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="p-2.5 bg-[#F4F4F7] border border-[#E2E2E9] rounded-xl text-[#3B30EC] group-hover:bg-[#3B30EC] group-hover:text-white transition-all">
-                      <FileText size={18} />
+                  <div className="flex items-center gap-2">
+                    <div className="bg-[#E8E8EF] p-0.5 rounded-md flex items-center">
+                      <button
+                        onClick={() => setViewMode("grid")}
+                        className={`p-1.5 rounded ${viewMode === "grid" ? "bg-white text-[#3B30EC] shadow-xs" : "text-[#82828A] hover:text-[#0F0F14]"}`}
+                      >
+                        <LayoutGrid size={14} />
+                      </button>
+                      <button
+                        onClick={() => setViewMode("list")}
+                        className={`p-1.5 rounded ${viewMode === "list" ? "bg-white text-[#3B30EC] shadow-xs" : "text-[#82828A] hover:text-[#0F0F14]"}`}
+                      >
+                        <List size={14} />
+                      </button>
                     </div>
-                    <button
-                      onClick={(e) => handleOpenMenu(e, file)}
-                      className="text-[#82828A] hover:text-[#0F0F14] p-1 hover:bg-[#F2F2F7] rounded-full transition-colors"
-                    >
-                      <MoreVertical size={16} />
+                    <button className="bg-white border border-[#E2E2E9] text-xs text-[#4A4A52] font-medium px-2.5 py-1.5 rounded-md flex items-center gap-1.5 shadow-xs hover:bg-[#F4F4F7]">
+                      <ArrowUpDown size={12} /> Sort
                     </button>
                   </div>
+                </div>
 
-                  <div>
-                    <h4 className="text-sm font-semibold text-[#0F0F14] truncate mb-1">
-                      {file.name}
-                    </h4>
-                    <div className="flex items-center justify-between text-[11px] font-mono text-[#82828A]">
-                      <span>{file.size}</span>
-                      <span className="bg-[#F4F4F7] px-1.5 py-0.5 rounded text-[#62626A] font-bold">
-                        {file.type}
-                      </span>
+                {viewMode === "grid" ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-5 w-full">
+                    {mockFiles?.map((file, idx) => (
+                      <div
+                        key={idx}
+                        className="bg-white border border-[#E2E2E9] hover:border-[#3B30EC]/60 rounded-xl p-4 transition-all group relative flex flex-col justify-between h-40 shadow-xs hover:shadow-md"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="p-2.5 bg-[#F4F4F7] border border-[#E2E2E9] rounded-xl text-[#3B30EC] group-hover:bg-[#3B30EC] group-hover:text-white transition-all">
+                            <FileText size={18} />
+                          </div>
+                          <button
+                            onClick={(e) => handleOpenMenu(e, file)}
+                            className="text-[#82828A] hover:text-[#0F0F14] p-1 hover:bg-[#F2F2F7] rounded-full transition-colors"
+                          >
+                            <MoreVertical size={16} />
+                          </button>
+                        </div>
+
+                        <div>
+                          <h4 className="text-sm font-semibold text-[#0F0F14] truncate mb-1">
+                            {file.name}
+                          </h4>
+                          <div className="flex items-center justify-between text-[11px] font-mono text-[#82828A]">
+                            <span>{file.size}</span>
+                            <span className="bg-[#F4F4F7] px-1.5 py-0.5 rounded text-[#62626A] font-bold">
+                              {file.type}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-white border border-[#E2E2E9] rounded-xl overflow-hidden shadow-xs w-full">
+                    <div className="w-full overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="border-b border-[#E2E2E9] bg-[#F4F4F7] text-[#62626A] uppercase font-mono tracking-wider">
+                            <th className="p-4 font-semibold">Name</th>
+                            <th className="p-4 font-semibold">Size</th>
+                            <th className="p-4 font-semibold">Access</th>
+                            <th className="p-4 font-semibold text-right">
+                              Modified
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#E2E2E9]">
+                          {mockFiles?.map((file, idx) => (
+                            <tr
+                              key={idx}
+                              className="hover:bg-[#F9F9FB] transition group"
+                            >
+                              <td className="p-4 flex items-center gap-3 text-[#0F0F14] font-semibold group-hover:text-[#3B30EC] transition">
+                                <FileText
+                                  size={16}
+                                  className="text-[#3B30EC]"
+                                />
+                                {file.name}
+                              </td>
+                              <td className="p-4 text-[#62626A] font-mono">
+                                {file.size}
+                              </td>
+                              <td className="p-4 text-[#62626A]">
+                                {file.shared}
+                              </td>
+                              <td className="p-4 text-[#82828A] text-right font-mono">
+                                {file.date}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="bg-white border border-[#E2E2E9] rounded-xl overflow-hidden shadow-xs w-full">
-              <div className="w-full overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="border-b border-[#E2E2E9] bg-[#F4F4F7] text-[#62626A] uppercase font-mono tracking-wider">
-                      <th className="p-4 font-semibold">Name</th>
-                      <th className="p-4 font-semibold">Size</th>
-                      <th className="p-4 font-semibold">Access</th>
-                      <th className="p-4 font-semibold text-right">Modified</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#E2E2E9]">
-                    {mockFiles?.map((file, idx) => (
-                      <tr
-                        key={idx}
-                        className="hover:bg-[#F9F9FB] transition group"
-                      >
-                        <td className="p-4 flex items-center gap-3 text-[#0F0F14] font-semibold group-hover:text-[#3B30EC] transition">
-                          <FileText size={16} className="text-[#3B30EC]" />
-                          {file.name}
-                        </td>
-                        <td className="p-4 text-[#62626A] font-mono">
-                          {file.size}
-                        </td>
-                        <td className="p-4 text-[#62626A]">{file.shared}</td>
-                        <td className="p-4 text-[#82828A] text-right font-mono">
-                          {file.date}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
+                )}
+              </main>
+            )}
+          </div>
         </main>
         <FileMenuModal
           isOpen={menuOpen}

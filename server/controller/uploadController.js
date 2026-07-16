@@ -94,7 +94,10 @@ export const getFile = async (req, res) => {
     console.log("reqqq", req.userId);
     const userId = req.userId;
     const fileList = await prisma.file.findMany({
-      where: { UserId: userId },
+      where: {
+        UserId: userId,
+        deletedAt: null,
+      },
     });
     return res.status(200).json({ message: "Files retrieved", fileList });
   } catch (error) {
@@ -163,6 +166,21 @@ export const removeAccess = async (req, res) => {
       where: { id: shareId },
     });
     return res.status(200).json({ message: "Access removed successfully" });
+  } catch (error) {
+    return res.status(500).json({ message: error });
+  }
+};
+
+export const restoreFile = async (req, res) => {
+  const id = req.params.id;
+  console.log("iddxfcghjk", id);
+  try {
+    await prisma.file.update({
+      where: { id: parseInt(id) },
+      data: { deletedAt: null },
+    });
+
+    return res.status(200).json({ message: "File restore" });
   } catch (error) {
     return res.status(500).json({ message: error });
   }
