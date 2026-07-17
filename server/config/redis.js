@@ -7,11 +7,16 @@ const redisClient=createClient({
     },
 })
 
-redisClient.on("error",(err)=>{
-    console.error("Redis client error",err.message);
-})
-
-redisClient.connect().catch((err) => {
-    console.error("Initial Redis connection failed", err.message);
+redisClient.on("error", (err) => {
+    console.error("Redis client error", err.message);
 });
-export default redisClient
+
+redisClient.connect()
+    .then(() => {
+        console.log("Connected to Redis at", process.env.REDIS_URI);
+    })
+    .catch((err) => {
+        console.error("Initial Redis connection failed", err.message);
+    });
+
+export default redisClient;
