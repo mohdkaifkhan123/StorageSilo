@@ -16,9 +16,10 @@ const folderService = {
   },
 
   // Fixed the syntax error and fully implemented the GET request
-  getAllContent: async (folderId = "root") => {
+  getAllContent: async (folderId = null) => {
     try {
-      let res = await fetch(`${API_URI}/allcontent/${folderId}`, {
+      const id = folderId ?? "null";
+      let res = await fetch(`${API_URI}/allcontent/${id}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",

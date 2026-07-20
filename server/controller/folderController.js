@@ -1,8 +1,9 @@
 import prisma from "../prisma/prismaClient.js";
 
 export const createFolder = async (req, res) => {
+  console.log("follllll", req.body);
   const { folderName, parentId } = req.body;
-  console.log("jhj", req.userId, folderName, parentId);
+  // console.log("jhj", req.userId, folderName, parentId);
 
   if (parentId) {
     const parent = await prisma.folder.findUnique({
@@ -92,14 +93,76 @@ const collectFolderContent = async (folderId) => {
     folders: nestedFolders,
   };
 };
+// --- NEW HIGH-PERFORMANCE BREADCRUMB HELPER ---
+const buildBreadcrumbs = async (folderId) => {
+  const path = [];
+  let currentFolderId = folderId;
+
+  // Trace UP the tree until we hit a null parentId (the root)
+  while (currentFolderId) {
+    const folder = await prisma.folder.findUnique({
+      where: { id: currentFolderId },
+      select: { id: true, folderName: true, parentId: true },
+    });
+
+    if (!folder) break;
+
+    path.unshift({ id: folder.id, name: folder.folderName });
+    currentFolderId = folder.parentId;
+  }
+
+  path.unshift({ id: null, name: "Home" }); // Use null here to stay consistent with frontend state
+  return path;
+};
+
+// --- REFACTORED: SHALLOW-LOADING CONTROLLER ---
 export const getFolderContent = async (req, res) => {
-  const folderId = parseInt(req.params.folderId);
+  const folderId = req.params.id;
+  console.log("Fetching content for folder ID:", folderId);
   const userId = req.userId;
 
-  const collectAllContent = await collectFolderContent(folderId);
   try {
-    return res.status(200).json({ message: collectAllContent });
+    // 1. Identify if we are viewing the top-level root ("Home")
+    // Safe-check against undefined, "root", or the literal string "null" from the client URL
+    const isRoot = !folderId || folderId === "root" || folderId === "null";
+    const parsedFolderId = isRoot ? null : parseInt(folderId);
+console.log("Final parsedFolderId sent to database query:", parsedFolderId);
+    // 2. Fetch ONLY the immediate folders inside this directory
+    const childFolders = await prisma.folder.findMany({
+      where: {
+        UserId: userId,
+        parentId: parsedFolderId,
+      },
+    });
+
+    // 3. Fetch ONLY the immediate files inside this directory
+    const files = await prisma.file.findMany({
+      where: {
+        UserId: userId,
+        FolderId: parsedFolderId,
+      },
+    });
+    console.log("filesss", files);
+    // 4. Generate the dynamic linear nav trail up to the root
+    const breadcrumbs = isRoot
+      ? [{ id: null, name: "Home" }]
+      : await buildBreadcrumbs(parsedFolderId);
+
+    // 5. UNIFY data: Combine files and folders into a single flat array
+    // We append an explicit 'isFolder' property to make frontend rendering foolproof
+    const unifiedContents = [
+      ...childFolders.map((folder) => ({ ...folder, isFolder: true })),
+      ...files.map((file) => ({ ...file, isFolder: false })),
+    ];
+
+    // 6. Send unified payload structure directly to frontend
+    return res.status(200).json({
+      success: true,
+      breadcrumbs,
+      contents: unifiedContents,
+    });
   } catch (error) {
-    return res.status(500).json({ message: "Interval server error" });
+    console.error("[getFolderContent Error]:", error);
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
