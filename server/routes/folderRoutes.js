@@ -7,5 +7,5 @@ const router = Router();
 router.post("/create", protect, createFolder);
 router.get("/", protect, findFoldersFiles);
 router.post("/share",protect,shareFolder);
-router.post("/allcontent",getFolderContent);
+router.get("/allcontent/:id",protect,getFolderContent);
 export default router;
