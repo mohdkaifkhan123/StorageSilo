@@ -22,8 +22,19 @@ const useFolderStore = create((set) => ({
     }
   },
 
-  // 3. Action: Fetch Content (Folders + Files + Breadcrumbs)
-fetchFolderContent: async (folderId = null) => {
+  // 3. Action: Delete Folder
+  deleteFolder: async (folderId) => {
+    try {
+      const res = await folderService.deleteFolderService(folderId);
+      return res;
+    } catch (error) {
+      console.error("Error deleting folder in store:", error);
+      return null;
+    }
+  },
+
+  // 4. Action: Fetch Content (Folders + Files + Breadcrumbs)
+  fetchFolderContent: async (folderId = null) => {
     set({ loading: true });
     try {
       // API returns { success, breadcrumbs, contents } — contents is a unified array

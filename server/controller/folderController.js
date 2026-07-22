@@ -126,12 +126,13 @@ export const getFolderContent = async (req, res) => {
     // Safe-check against undefined, "root", or the literal string "null" from the client URL
     const isRoot = !folderId || folderId === "root" || folderId === "null";
     const parsedFolderId = isRoot ? null : parseInt(folderId);
-console.log("Final parsedFolderId sent to database query:", parsedFolderId);
+    console.log("Final parsedFolderId sent to database query:", parsedFolderId);
     // 2. Fetch ONLY the immediate folders inside this directory
     const childFolders = await prisma.folder.findMany({
       where: {
         UserId: userId,
         parentId: parsedFolderId,
+        deletedAt: null,
       },
     });
 
@@ -140,6 +141,7 @@ console.log("Final parsedFolderId sent to database query:", parsedFolderId);
       where: {
         UserId: userId,
         FolderId: parsedFolderId,
+        deletedAt: null,
       },
     });
     console.log("filesss", files);
@@ -164,5 +166,64 @@ console.log("Final parsedFolderId sent to database query:", parsedFolderId);
   } catch (error) {
     console.error("[getFolderContent Error]:", error);
     return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const deleteFolder = async (req, res) => {
+  try {
+    const folderId = parseInt(req.params.id);
+
+    if (isNaN(folderId)) {
+      return res.status(400).json({ message: "Invalid folder ID" });
+    }
+
+    // Helper function to recursively gather target folder ID and all subfolder IDs
+    const getNestedFolderIds = async (id) => {
+      let ids = [id];
+      const children = await prisma.folder.findMany({
+        where: { parentId: id, deletedAt: null },
+        select: { id: true },
+      });
+
+      for (const child of children) {
+        const childIds = await getNestedFolderIds(child.id);
+        ids = ids.concat(childIds);
+      }
+
+      return ids;
+    };
+    // 1. Get all nested folder IDs (including the parent folder)
+    const allFolderIds = await getNestedFolderIds(folderId);
+    const now = new Date();
+    console.log("allFolderIds", allFolderIds);
+
+    // 2. Perform soft deletes atomically using a Prisma Transaction
+    await prisma.$transaction([
+      // Soft-delete all files inside any of these folders
+      prisma.file.updateMany({
+        where: {
+          FolderId: { in: allFolderIds },
+          deletedAt: null,
+        },
+        data: { deletedAt: now },
+      }),
+
+      // Soft-delete the parent folder and all its subfolders
+      prisma.folder.updateMany({
+        where: {
+          id: { in: allFolderIds },
+          deletedAt: null,
+        },
+        data: { deletedAt: now },
+      }),
+    ]);
+
+    return res.status(200).json({
+      message: "Folder and all of its contents deleted successfully",
+    });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ message: "Server error", error: error.message });
   }
 };

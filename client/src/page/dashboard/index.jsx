@@ -37,7 +37,7 @@ const Dashboard = () => {
   const { presignedURL, saveMetaDataStore, deleteFiles } = useFileStore();
   
   // FIXED: Destructure 'folders' and 'files' instead of 'contents'
-  const { createFolder, folders, files, breadcrumbs, fetchFolderContent } = useFolderStore();
+  const { createFolder, deleteFolder, folders, files, breadcrumbs, fetchFolderContent } = useFolderStore();
   const inputFileRef = useRef();
 
   const formatBytes = (bytes, decimals = 2) => {
@@ -136,7 +136,11 @@ const Dashboard = () => {
 
   const handleDeleteAction = async (id) => {
     try {
-      await deleteFiles(id);
+      if (selectedFile?.isFolder) {
+        await deleteFolder(id);
+      } else {
+        await deleteFiles(id);
+      }
       await fetchFolderContent(currentFolderId);
     } catch (error) {
       console.error("Error executing delete pipeline:", error);
