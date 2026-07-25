@@ -49,7 +49,24 @@ const folderService = {
       console.error("Error deleting folder in service:", error);
       throw error;
     }
-  }
+  },
+
+  restoreFolderService: async (folderId) => {
+    try {
+      let res = await fetch(`${API_URI}/restore/${folderId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      });
+      let data = await res.json();
+      return data;
+    } catch (error) {
+      console.error("Error restoring folder in service:", error);
+      throw error;
+    }
+  },
 };
 
 export default folderService;

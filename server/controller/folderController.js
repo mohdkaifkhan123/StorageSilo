@@ -1,9 +1,7 @@
 import prisma from "../prisma/prismaClient.js";
 
 export const createFolder = async (req, res) => {
-  console.log("follllll", req.body);
   const { folderName, parentId } = req.body;
-  // console.log("jhj", req.userId, folderName, parentId);
 
   if (parentId) {
     const parent = await prisma.folder.findUnique({
@@ -93,12 +91,10 @@ const collectFolderContent = async (folderId) => {
     folders: nestedFolders,
   };
 };
-// --- NEW HIGH-PERFORMANCE BREADCRUMB HELPER ---
 const buildBreadcrumbs = async (folderId) => {
   const path = [];
   let currentFolderId = folderId;
 
-  // Trace UP the tree until we hit a null parentId (the root)
   while (currentFolderId) {
     const folder = await prisma.folder.findUnique({
       where: { id: currentFolderId },
@@ -111,53 +107,47 @@ const buildBreadcrumbs = async (folderId) => {
     currentFolderId = folder.parentId;
   }
 
-  path.unshift({ id: null, name: "Home" }); // Use null here to stay consistent with frontend state
+  path.unshift({ id: null, name: "Home" }); 
   return path;
 };
 
-// --- REFACTORED: SHALLOW-LOADING CONTROLLER ---
 export const getFolderContent = async (req, res) => {
   const folderId = req.params.id;
   console.log("Fetching content for folder ID:", folderId);
   const userId = req.userId;
 
   try {
-    // 1. Identify if we are viewing the top-level root ("Home")
-    // Safe-check against undefined, "root", or the literal string "null" from the client URL
+   
     const isRoot = !folderId || folderId === "root" || folderId === "null";
     const parsedFolderId = isRoot ? null : parseInt(folderId);
     console.log("Final parsedFolderId sent to database query:", parsedFolderId);
-    // 2. Fetch ONLY the immediate folders inside this directory
+  
     const childFolders = await prisma.folder.findMany({
       where: {
         UserId: userId,
         parentId: parsedFolderId,
-        deletedAt: null,
+        isExplicitlyDeleted: false,
       },
     });
 
-    // 3. Fetch ONLY the immediate files inside this directory
     const files = await prisma.file.findMany({
       where: {
         UserId: userId,
         FolderId: parsedFolderId,
-        deletedAt: null,
+        isExplicitlyDeleted: false,
       },
     });
     console.log("filesss", files);
-    // 4. Generate the dynamic linear nav trail up to the root
     const breadcrumbs = isRoot
       ? [{ id: null, name: "Home" }]
       : await buildBreadcrumbs(parsedFolderId);
 
-    // 5. UNIFY data: Combine files and folders into a single flat array
-    // We append an explicit 'isFolder' property to make frontend rendering foolproof
+   
     const unifiedContents = [
       ...childFolders.map((folder) => ({ ...folder, isFolder: true })),
       ...files.map((file) => ({ ...file, isFolder: false })),
     ];
 
-    // 6. Send unified payload structure directly to frontend
     return res.status(200).json({
       success: true,
       breadcrumbs,
@@ -177,53 +167,73 @@ export const deleteFolder = async (req, res) => {
       return res.status(400).json({ message: "Invalid folder ID" });
     }
 
-    // Helper function to recursively gather target folder ID and all subfolder IDs
-    const getNestedFolderIds = async (id) => {
-      let ids = [id];
-      const children = await prisma.folder.findMany({
-        where: { parentId: id, deletedAt: null },
-        select: { id: true },
+    const folder = await prisma.folder.findUnique({
+      where: { id: folderId },
+      select: { id: true, UserId: true, isExplicitlyDeleted: true },
+    });
+
+    if (!folder) return res.status(404).json({ message: "Folder not found" });
+    if (folder.UserId !== req.userId) return res.status(403).json({ message: "Unauthorized" });
+    if (folder.isExplicitlyDeleted) return res.status(400).json({ message: "Folder is already deleted" });
+
+  
+    await prisma.folder.update({
+      where: { id: folderId },
+      data: {
+        deletedAt: new Date(),
+        isExplicitlyDeleted: true,
+      },
+    });
+
+    return res.status(200).json({ message: "Folder moved to trash" });
+  } catch (error) {
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+export const restoreFolder = async (req, res) => {
+  try {
+    const folderId = parseInt(req.params.id);
+
+    if (isNaN(folderId)) {
+      return res.status(400).json({ message: "Invalid folder ID" });
+    }
+
+    const folder = await prisma.folder.findUnique({
+      where: { id: folderId },
+      select: { id: true, UserId: true, isExplicitlyDeleted: true, parentId: true },
+    });
+
+    if (!folder) return res.status(404).json({ message: "Folder not found" });
+    if (folder.UserId !== req.userId) return res.status(403).json({ message: "Unauthorized" });
+    if (!folder.isExplicitlyDeleted) return res.status(400).json({ message: "Folder is not in trash" });
+
+   
+    let restoredParentId = folder.parentId;
+    if (folder.parentId) {
+      const parent = await prisma.folder.findUnique({
+        where: { id: folder.parentId },
+        select: { isExplicitlyDeleted: true },
       });
-
-      for (const child of children) {
-        const childIds = await getNestedFolderIds(child.id);
-        ids = ids.concat(childIds);
+      if (parent?.isExplicitlyDeleted) {
+        restoredParentId = null; 
       }
+    }
 
-      return ids;
-    };
-    // 1. Get all nested folder IDs (including the parent folder)
-    const allFolderIds = await getNestedFolderIds(folderId);
-    const now = new Date();
-    console.log("allFolderIds", allFolderIds);
-
-    // 2. Perform soft deletes atomically using a Prisma Transaction
-    await prisma.$transaction([
-      // Soft-delete all files inside any of these folders
-      prisma.file.updateMany({
-        where: {
-          FolderId: { in: allFolderIds },
-          deletedAt: null,
-        },
-        data: { deletedAt: now },
-      }),
-
-      // Soft-delete the parent folder and all its subfolders
-      prisma.folder.updateMany({
-        where: {
-          id: { in: allFolderIds },
-          deletedAt: null,
-        },
-        data: { deletedAt: now },
-      }),
-    ]);
+    await prisma.folder.update({
+      where: { id: folderId },
+      data: {
+        deletedAt: null,
+        isExplicitlyDeleted: false,
+        parentId: restoredParentId,
+      },
+    });
 
     return res.status(200).json({
-      message: "Folder and all of its contents deleted successfully",
+      message: "Folder restored successfully",
+      restoredToRoot: restoredParentId === null && folder.parentId !== null,
     });
   } catch (error) {
-    return res
-      .status(500)
-      .json({ message: "Server error", error: error.message });
+    return res.status(500).json({ message: "Server error", error: error.message });
   }
 };

@@ -33,7 +33,18 @@ const useFolderStore = create((set) => ({
     }
   },
 
-  // 4. Action: Fetch Content (Folders + Files + Breadcrumbs)
+  // 4. Action: Restore Folder
+  restoreFolder: async (folderId) => {
+    try {
+      const res = await folderService.restoreFolderService(folderId);
+      return res;
+    } catch (error) {
+      console.error("Error restoring folder in store:", error);
+      return null;
+    }
+  },
+
+  // 5. Action: Fetch Content (Folders + Files + Breadcrumbs)
   fetchFolderContent: async (folderId = null) => {
     set({ loading: true });
     try {

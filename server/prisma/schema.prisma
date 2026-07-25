@@ -28,29 +28,32 @@ model User {
 }
 
 model File{
-    id        Int    @id@default(autoincrement())
-    fileSize  Int   
-    fileName  String
-    fileUrl   String 
-    UserId    Int
-    mimetype  String?
-    deletedAt DateTime?
-    user      User  @relation(fields:[UserId],references:[id])
-    FolderId  Int?
-    folder    Folder? @relation(fields:[FolderId],references:[id])
-    shares    Shared[]
+    id                  Int    @id@default(autoincrement())
+    fileSize            Int   
+    fileName            String
+    fileUrl             String 
+    UserId              Int
+    mimetype            String?
+    deletedAt           DateTime?
+    isExplicitlyDeleted Boolean  @default(false)
+    user                User  @relation(fields:[UserId],references:[id])
+    FolderId            Int?
+    folder              Folder? @relation(fields:[FolderId],references:[id])
+    shares              Shared[]
 }
 
 model Folder{
-  id         Int    @id@default(autoincrement())
-  folderName String
-  UserId     Int
-  user       User  @relation(fields:[UserId],references:[id])
-  parentId   Int?
-  parent     Folder? @relation("NestedArch",fields:[parentId],references:[id])
-  subFolders Folder[] @relation("NestedArch")
-  files      File[]
-  shares     Shared[]
+  id                  Int    @id@default(autoincrement())
+  folderName          String
+  UserId              Int
+  user                User  @relation(fields:[UserId],references:[id])
+  parentId            Int?
+  parent              Folder? @relation("NestedArch",fields:[parentId],references:[id])
+  subFolders          Folder[] @relation("NestedArch")
+  files               File[]
+  shares              Shared[]
+  deletedAt           DateTime?
+  isExplicitlyDeleted Boolean  @default(false)
 }
 
 model Shared{
