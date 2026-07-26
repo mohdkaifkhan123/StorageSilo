@@ -111,7 +111,7 @@ export const deleteFile = async (req, res) => {
     const fileId = req.params.id;
     await prisma.file.update({
       where: { id: parseInt(fileId) },
-      data: { deletedAt: new Date() },
+      data: { deletedAt: new Date(), isExplicitlyDeleted: true },
     });
     return res.status(200).json({ message: "File deleted successfully" });
   } catch (error) {
@@ -121,16 +121,25 @@ export const deleteFile = async (req, res) => {
   }
 };
 export const getTrashData = async (req, res) => {
-  const trashData = await prisma.file.findMany({
-    where: {
-      UserId: req.userId,
-      deletedAt: {
-        not: null,
-      },
-    },
-  });
+  try {
+    const [files, folders] = await Promise.all([
+      prisma.file.findMany({
+        where: { UserId: req.userId, isExplicitlyDeleted: true },
+      }),
+      prisma.folder.findMany({
+        where: { UserId: req.userId, isExplicitlyDeleted: true },
+      }),
+    ]);
 
-  return res.status(200).json({ trashData });
+    const trashData = [
+      ...folders.map((f) => ({ ...f, isFolder: true, name: f.folderName })),
+      ...files.map((f) => ({ ...f, isFolder: false, name: f.fileName })),
+    ];
+
+    return res.status(200).json({ trashData });
+  } catch (error) {
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
 };
 
 export const shareFile = async (req, res) => {
@@ -173,11 +182,10 @@ export const removeAccess = async (req, res) => {
 
 export const restoreFile = async (req, res) => {
   const id = req.params.id;
-  console.log("iddxfcghjk", id);
   try {
     await prisma.file.update({
       where: { id: parseInt(id) },
-      data: { deletedAt: null },
+      data: { deletedAt: null, isExplicitlyDeleted: false },
     });
 
     return res.status(200).json({ message: "File restore" });
