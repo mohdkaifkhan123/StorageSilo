@@ -2,34 +2,6 @@ import prisma from "../prisma/prismaClient.js";
 import s3 from "../config/awsS3.js";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-// export const uploadFile = async (req, res) => {
-//   try {
-//     const { fieldname, originalname, path, size, mimetype } = req.file;
-//     const { FolderId } = req.body;
-
-//     if (!req.file) {
-//       return res.status(400).json({ message: "No file uploaded" });
-//     }
-//     const file = await prisma.file.create({
-//       data: {
-//         fileName: originalname,
-//         fileUrl: path,
-//         fileSize: size,
-//         UserId: req.userId,
-//         mimetype: mimetype,
-//         FolderId: parseInt(FolderId),
-//       },
-//       include: {
-//         user: true,
-//       },
-//     });
-//     return res.status(200).json({ message: "File saved successfully", file });
-//   } catch (error) {
-//     return res
-//       .status(500)
-//       .json({ message: "Server error", error: error.message });
-//   }
-// };
 
 export const preSignedURL = async (req, res) => {
   const { name, type } = req.body;
@@ -56,11 +28,6 @@ export const preSignedURL = async (req, res) => {
 export const uploadFile = async (req, res) => {
   try {
     const { originalname, path, size, mimetype, FolderId } = req.body;
-    // const { FolderId } = req.body;
-    //name size type
-    // if (!req.file) {
-    //   return res.status(400).json({ message: "No file uploaded" });
-    // }
     const file = await prisma.file.create({
       data: {
         fileName: originalname,
@@ -87,6 +54,36 @@ export const uploadFile = async (req, res) => {
     return res
       .status(500)
       .json({ message: "Server error", error: error.message });
+  }
+};
+export const getDownloadUrl = async (req, res) => {
+  try {
+    const fileId = parseInt(req.params.id);
+    const userId = req.user.id;
+
+    const file = await prisma.file.findFirst({
+      where: {
+        id: fileId,
+        UserId: userId,
+        deletedAt: null,
+      },
+    });
+
+    if (!file) {
+      return res.status(404).json({ message: "File not found or is in trash" });
+    }
+
+    const command = new GetObjectCommand({
+      Bucket: process.env.AWS_BUCKET_NAME,
+      Key: file.fileUrl,
+      ResponseContentDisposition: `attachment; filename="${encodeURIComponent(file.fileName)}"`,
+    });
+
+    const downloadUrl = await getSignedUrl(s3Client, command, { expiresIn: 900 });
+
+    return res.status(200).json({ downloadUrl });
+  } catch (error) {
+    return res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 export const getFile = async (req, res) => {

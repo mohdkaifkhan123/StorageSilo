@@ -6,7 +6,8 @@ import {
   removeAccess,
   preSignedURL,
   getTrashData,
-  restoreFile
+  restoreFile,
+  getDownloadUrl
 } from "../controller/uploadController.js";
 import Router from "express";
 import { upload } from "../middleware/upload.js";
@@ -21,4 +22,5 @@ router.post("/remove",protect,removeAccess)
 router.post("/signedurl",protect,preSignedURL)
 router.get("/trash",protect,getTrashData)
 router.put("/restore/:id",protect,restoreFile)
+router.get("/download",getDownloadUrl)
 export default router;
