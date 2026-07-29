@@ -70,6 +70,21 @@ const fileService = {
     const data = await res.json();
     return data;
   },
+  downloadFileService: async (id) => {
+    const res = await fetch(`${API_URL}/download/${id}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.message || "Failed to get download URL");
+    }
+    return data;
+  },
 };
 
 export default fileService;

@@ -41,6 +41,25 @@ const useFileStore = create((set) => ({
     const res = await fileService.restoreService(id);
     return res;
   },
+  downloadFile: async (id) => {
+    try {
+      const res = await fileService.downloadFileService(id);
+
+      if (res?.downloadUrl) {
+        const link = document.createElement("a");
+        link.href = res.downloadUrl;
+        link.setAttribute("download", "");
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      }
+
+      return res;
+    } catch (error) {
+      set({ error: error.message });
+      console.error("Download error:", error);
+    }
+  }
 }));
 
 export default useFileStore;

@@ -1,6 +1,6 @@
 import prisma from "../prisma/prismaClient.js";
 import s3 from "../config/awsS3.js";
-import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 export const preSignedURL = async (req, res) => {
@@ -35,7 +35,7 @@ export const uploadFile = async (req, res) => {
         fileSize: size,
         UserId: req.userId,
         mimetype: mimetype,
-        FolderId: parseInt(FolderId),
+        FolderId: FolderId ? parseInt(FolderId) : null,
       },
       include: {
         user: {
@@ -59,7 +59,7 @@ export const uploadFile = async (req, res) => {
 export const getDownloadUrl = async (req, res) => {
   try {
     const fileId = parseInt(req.params.id);
-    const userId = req.user.id;
+    const userId = req.userId;
 
     const file = await prisma.file.findFirst({
       where: {
@@ -79,7 +79,7 @@ export const getDownloadUrl = async (req, res) => {
       ResponseContentDisposition: `attachment; filename="${encodeURIComponent(file.fileName)}"`,
     });
 
-    const downloadUrl = await getSignedUrl(s3Client, command, { expiresIn: 900 });
+    const downloadUrl = await getSignedUrl(s3, command, { expiresIn: 900 });
 
     return res.status(200).json({ downloadUrl });
   } catch (error) {

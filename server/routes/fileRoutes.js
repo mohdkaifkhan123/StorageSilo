@@ -22,5 +22,5 @@ router.post("/remove",protect,removeAccess)
 router.post("/signedurl",protect,preSignedURL)
 router.get("/trash",protect,getTrashData)
 router.put("/restore/:id",protect,restoreFile)
-router.get("/download",getDownloadUrl)
+router.get("/download/:id",getDownloadUrl)
 export default router;
