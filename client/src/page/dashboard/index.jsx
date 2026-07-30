@@ -31,10 +31,11 @@ const Dashboard = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   const [currentFolderId, setCurrentFolderId] = useState(null);
+  const [isDragOver, setIsDragOver] = useState(false);
   
   const navigate = useNavigate();
 
-  const { presignedURL, saveMetaDataStore, deleteFiles } = useFileStore();
+  const { presignedURL, saveMetaDataStore, deleteFiles, downloadFile } = useFileStore();
   
   // FIXED: Destructure 'folders' and 'files' instead of 'contents'
   const { createFolder, deleteFolder, folders, files, breadcrumbs, fetchFolderContent } = useFolderStore();
@@ -102,18 +103,15 @@ const Dashboard = () => {
   const routeSetting = () => navigate("/setting");
   const handleFileSelection = () => inputFileRef.current.click();
 
-  const handleFileChange = async (e) => {
-    const metadata = e.target.files[0];
+  const uploadFile = async (metadata) => {
     if (!metadata) return;
-    
     const { name, type, size } = metadata;
     const urlData = await presignedURL({ name, type });
-    let res = await fetch(urlData.uploadURL, {
+    const res = await fetch(urlData.uploadURL, {
       method: "PUT",
       body: metadata,
       headers: { "Content-Type": metadata.type },
     });
-    
     if (res.ok) {
       await saveMetaDataStore({
         originalname: name,
@@ -125,6 +123,24 @@ const Dashboard = () => {
       await fetchFolderContent(currentFolderId);
     }
   };
+
+  const handleFileChange = async (e) => {
+    await uploadFile(e.target.files[0]);
+  };
+
+  const handleDrop = async (e) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const file = e.dataTransfer.files[0];
+    await uploadFile(file);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = () => setIsDragOver(false);
 
   const handleOpenMenu = (e, file) => {
     e.stopPropagation();
@@ -287,7 +303,17 @@ const Dashboard = () => {
           ) : (
             <>
               {/* Dropzone */}
-              <div className="w-full border border-dashed border-[#C4C4D0] hover:border-[#3B30EC] bg-white rounded-xl p-8 transition-colors flex flex-col items-center justify-center text-center cursor-pointer group shadow-sm">
+              <div
+                onClick={handleFileSelection}
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                className={`w-full border border-dashed rounded-xl p-8 transition-colors flex flex-col items-center justify-center text-center cursor-pointer group shadow-sm ${
+                  isDragOver
+                    ? "border-[#3B30EC] bg-[#F0EFFE]"
+                    : "border-[#C4C4D0] hover:border-[#3B30EC] bg-white"
+                }`}
+              >
                 <div className="w-10 h-10 rounded-xl bg-[#F4F4F7] border border-[#E2E2E9] group-hover:border-[#3B30EC]/30 flex items-center justify-center text-[#62626A] group-hover:text-[#3B30EC] transition-colors mb-3">
                   <Upload size={18} />
                 </div>
@@ -442,6 +468,7 @@ const Dashboard = () => {
         anchorPosition={menuPosition}
         file={selectedFile}
         onDelete={handleDeleteAction}
+        onDownload={(file) => downloadFile(file.id)}
       />
 
       <CreateFolderModal

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import useFileStore from "../../../store/fileStore";
+import useFolderStore from "../../../store/folderStore";
 
 const MoreVerticalIcon = () => (
   <svg
@@ -13,6 +14,22 @@ const MoreVerticalIcon = () => (
       strokeLinecap="round"
       strokeLinejoin="round"
       d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
+    />
+  </svg>
+);
+
+const FolderIcon = () => (
+  <svg
+    className="h-5 w-5 text-amber-500"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+    strokeWidth={1.5}
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"
     />
   </svg>
 );
@@ -53,16 +70,15 @@ export default function TrashView() {
   const menuRef = useRef(null);
 
   const { getTrashData, restoreFile } = useFileStore();
+  const { restoreFolder } = useFolderStore();
 
   const handleTrashData = async () => {
     try {
       setIsLoading(true);
       setError(null);
       const res = await getTrashData();
-      if (res && res.trashData) {
+      if (res && Array.isArray(res.trashData)) {
         setTrashData(res.trashData);
-      } else if (Array.isArray(res)) {
-        setTrashData(res);
       }
     } catch (err) {
       console.error("Error fetching trash data:", err);
@@ -86,14 +102,17 @@ export default function TrashView() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleRestoreClick = async (fileId) => {
+  const handleRestoreClick = async (item) => {
     try {
-      await restoreFile(fileId);
-
-      setTrashData((prev) => prev.filter((file) => file.id !== fileId));
+      if (item.isFolder) {
+        await restoreFolder(item.id);
+      } else {
+        await restoreFile(item.id);
+      }
+      setTrashData((prev) => prev.filter((i) => i.id !== item.id || i.isFolder !== item.isFolder));
       setActiveMenuId(null);
     } catch (err) {
-      console.error("Failed to restore file:", err);
+      console.error("Failed to restore item:", err);
     }
   };
 
@@ -145,9 +164,9 @@ export default function TrashView() {
               />
             </svg>
           </div>
-          <p className="text-gray-500 text-sm font-medium">
-            Your trash bin is completely empty.
-          </p>
+                  <p className="text-gray-500 text-sm font-medium">
+                    Your trash bin is completely empty.
+                  </p>
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -155,39 +174,48 @@ export default function TrashView() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-gray-100 text-[11px] font-bold uppercase tracking-wider text-gray-400 bg-gray-50/30">
-                  <th className="py-4 px-6 w-1/2">File Name</th>
+                  <th className="py-4 px-6 w-1/2">Name</th>
+                  <th className="py-4 px-6 w-1/6">Type</th>
                   <th className="py-4 px-6 w-1/3">Deleted On</th>
                   <th className="py-4 px-6 w-1/6 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50 text-sm">
-                {trashData.map((file) => (
+                {trashData.map((item) => (
                   <tr
-                    key={file.id}
+                    key={`${item.isFolder ? "folder" : "file"}-${item.id}`}
                     className="hover:bg-gray-50/80 transition-all duration-200 group"
                   >
                     <td className="py-4 px-6 font-medium text-gray-700 flex items-center space-x-4">
                       <div className="p-2.5 bg-[#F3F2FF] rounded-lg shrink-0 border border-indigo-50/50 group-hover:scale-105 transition-transform duration-200">
-                        <FileIcon />
+                        {item.isFolder ? <FolderIcon /> : <FileIcon />}
                       </div>
                       <span className="truncate max-w-[200px] sm:max-w-xs md:max-w-sm group-hover:text-[#3B30EC] transition-colors cursor-default">
-                        {file.fileName}
+                        {item.name}
                       </span>
                     </td>
 
                     <td className="py-4 px-6 text-gray-500 font-medium text-xs">
-                      {formatDate(file.deletedAt)}
+                      <span className={`px-2 py-1 rounded-md font-bold text-[10px] ${
+                        item.isFolder ? "bg-amber-50 text-amber-600" : "bg-[#F4F4F7] text-[#62626A]"
+                      }`}>
+                        {item.isFolder ? "FOLDER" : (item.mimetype?.split("/")[1]?.toUpperCase() || "FILE")}
+                      </span>
+                    </td>
+
+                    <td className="py-4 px-6 text-gray-500 font-medium text-xs">
+                      {formatDate(item.deletedAt)}
                     </td>
 
                     <td className="py-4 px-6 text-right relative">
                       <button
                         onClick={() =>
                           setActiveMenuId(
-                            activeMenuId === file.id ? null : file.id,
+                            activeMenuId === `${item.isFolder}-${item.id}` ? null : `${item.isFolder}-${item.id}`,
                           )
                         }
                         className={`p-2 rounded-lg transition-all duration-200 inline-flex items-center justify-center ${
-                          activeMenuId === file.id
+                          activeMenuId === `${item.isFolder}-${item.id}`
                             ? "bg-gray-100 text-gray-900"
                             : "hover:bg-gray-100 text-gray-400"
                         }`}
@@ -195,13 +223,13 @@ export default function TrashView() {
                         <MoreVerticalIcon />
                       </button>
 
-                      {activeMenuId === file.id && (
+                      {activeMenuId === `${item.isFolder}-${item.id}` && (
                         <div
                           ref={menuRef}
                           className="absolute right-8 top-12 z-50 w-40 bg-white rounded-xl border border-gray-100 shadow-lg py-1.5 text-left animate-in fade-in slide-in-from-top-2 duration-200"
                         >
                           <button
-                            onClick={() => handleRestoreClick(file.id)}
+                            onClick={() => handleRestoreClick(item)}
                             className="w-full px-4 py-2.5 text-sm text-[#3B30EC] hover:bg-[#F3F2FF] font-medium flex items-center space-x-2.5 transition-colors"
                           >
                             <svg
