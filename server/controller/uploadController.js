@@ -103,6 +103,27 @@ export const getFile = async (req, res) => {
       .json({ message: "Server error", error: error.message });
   }
 };
+export const renameFile = async (req, res) => {
+  try {
+    const fileId = parseInt(req.params.id);
+    const { name } = req.body;
+    if (!name) return res.status(400).json({ message: "Name is required" });
+
+    const file = await prisma.file.findFirst({
+      where: { id: fileId, UserId: req.userId, deletedAt: null },
+    });
+    if (!file) return res.status(404).json({ message: "File not found or unauthorized" });
+
+    const updated = await prisma.file.update({
+      where: { id: fileId },
+      data: { fileName: name },
+    });
+    return res.status(200).json({ message: "File renamed successfully", file: updated });
+  } catch (error) {
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
 export const deleteFile = async (req, res) => {
   try {
     const fileId = req.params.id;

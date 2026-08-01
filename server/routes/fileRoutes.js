@@ -7,7 +7,8 @@ import {
   preSignedURL,
   getTrashData,
   restoreFile,
-  getDownloadUrl
+  getDownloadUrl,
+  renameFile
 } from "../controller/uploadController.js";
 import Router from "express";
 import { upload } from "../middleware/upload.js";
@@ -23,4 +24,5 @@ router.post("/signedurl",protect,preSignedURL)
 router.get("/trash",protect,getTrashData)
 router.put("/restore/:id",protect,restoreFile)
 router.get("/download/:id",getDownloadUrl)
+router.patch("/rename/:id", protect, renameFile)
 export default router;
