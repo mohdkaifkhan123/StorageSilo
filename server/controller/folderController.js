@@ -1,5 +1,26 @@
 import prisma from "../prisma/prismaClient.js";
 
+export const renameFolder = async (req, res) => {
+  try {
+    const folderId = parseInt(req.params.id);
+    const { name } = req.body;
+    if (!name) return res.status(400).json({ message: "Name is required" });
+
+    const folder = await prisma.folder.findFirst({
+      where: { id: folderId, UserId: req.userId, deletedAt: null },
+    });
+    if (!folder) return res.status(404).json({ message: "Folder not found or unauthorized" });
+
+    const updated = await prisma.folder.update({
+      where: { id: folderId },
+      data: { folderName: name },
+    });
+    return res.status(200).json({ message: "Folder renamed successfully", folder: updated });
+  } catch (error) {
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
 export const createFolder = async (req, res) => {
   const { folderName, parentId } = req.body;
 
